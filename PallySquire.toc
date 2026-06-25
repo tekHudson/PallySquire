@@ -1,0 +1,27 @@
+## Interface: 11507
+## Title: PallySquire
+## Notes: Clean, SoD-native paladin blessing manager with cross-paladin assignment sync.
+## Author: tek
+## Version: 0.1.0
+## DefaultState: enabled
+## IconTexture: Interface\Icons\Spell_Holy_GreaterBlessingofKings
+## SavedVariables: PallySquireDB, PallySquire_Assignments, PallySquire_NormalAssignments, PallySquire_AuraAssignments, PallySquire_Presets
+
+# Bootstrap (namespace, utils, event dispatch)
+PallySquire.lua
+
+# Locale
+Locale\enUS.lua
+
+# Core
+Core\Data.lua
+Core\DB.lua
+Core\Comm.lua
+Core\Roster.lua
+Core\Buffs.lua
+
+# UI (pure Lua, no XML)
+UI\Frame.lua
+UI\Buttons.lua
+UI\Config.lua
+UI\Options.lua
