@@ -5,6 +5,7 @@
 ## Version: 0.1.0
 ## DefaultState: enabled
 ## IconTexture: Interface\AddOns\PallySquire\Icons\Icon
+## X-Curse-Project-ID: 1588196
 ## SavedVariables: PallySquireDB, PallySquire_Assignments, PallySquire_NormalAssignments, PallySquire_AuraAssignments, PallySquire_Presets
 
 # Bootstrap (namespace, utils, event dispatch)
