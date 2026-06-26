@@ -6,6 +6,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com) and
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-26
+### Fixed
+- Paladin-only: the addon now disables itself entirely on non-paladin
+  characters (no bar, minimap, comms, events, or options) instead of loading.
+
 ## [0.1.0] - 2026-06-25
 ### Added
 - Initial release: a clean, Season of Discovery–native paladin blessing

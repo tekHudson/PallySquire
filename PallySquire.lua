@@ -154,6 +154,12 @@ function PS:PLAYER_LOGIN()
 	PS.player = ns.Short(UnitName("player"))
 	PS.isPally = select(2, UnitClass("player")) == "PALADIN"
 
+	-- Paladin-only: disable entirely on any other class.
+	if not PS.isPally then
+		PS:Print("disabled — Paladin only.")
+		return
+	end
+
 	C_ChatInfo.RegisterAddonMessagePrefix(PS.commPrefix)
 
 	PS:InitData()      -- build localized spell tables (needs spell data loaded)
