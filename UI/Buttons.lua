@@ -1,51 +1,92 @@
 --[[ PallySquire — secure action buttons, layout, and visual refresh.
 
-All UI built in Lua. Cast wiring uses SecureActionButtonTemplate: out of
-combat we set each button's spell/unit attributes so a click performs a
-single-target blessing. Player pop-out buttons (fixed unit) remain castable
-in combat; class/auto buttons only re-arm out of combat. Pop-outs reveal on
-hover via SecureHandlerEnterLeaveTemplate so hovering works mid-combat.
+Compact icon-only action bar built in Lua. Cast wiring uses
+SecureActionButtonTemplate: out of combat we set each button's spell/unit
+attributes so a click performs a single-target blessing. Player pop-out
+buttons (fixed unit) stay castable in combat; class/auto buttons only re-arm
+out of combat. Right-clicking a class button toggles its player pop-outs (set
+up out of combat; they persist into combat once shown).
+
+Layout: row of controls (auto / aura / seal), then a row of class buttons.
+Every button shares one dark background; class need-state is shown as a
+colored BORDER, never a full fill, so the bar reads consistently.
 ]]
 
 local ADDON, ns = ...
 local PS = ns.PS
 
-local BW, BH = 116, 26       -- class button size
-local PAD = 2
-local SECURE = "SecureActionButtonTemplate,SecureHandlerEnterLeaveTemplate"
+local SIZE = 32
+local PAD  = 3
+local MARGIN = 6   -- inner padding between the backdrop edge and the buttons
+-- All buttons cast via SecureActionButtonTemplate. The class buttons' right-
+-- click pop-out toggle is handled in insecure PostClick (out of combat) so it
+-- never collides with the secure OnClick cast handler.
+local CONTROL_SECURE = "SecureActionButtonTemplate"
+
+local AUTO_ICON = "Interface\\Icons\\Spell_Holy_GreaterBlessingofKings"
+local NONE_ICON = "Interface\\Buttons\\UI-GroupLoot-Pass-Up"
+local BORDER_NEUTRAL = { 0.45, 0.37, 0.15 }  -- subtle gold frame
+
+-- How many class columns before wrapping, per layout mode.
+local function classColumns()
+	local m = PS.opt.layout
+	if m == "vertical" then return 1 end
+	if m == "horizontal" then return ns.MAX_CLASSES end
+	return 3  -- "grid" default
+end
 
 ----------------------------------------------------------------------
--- Region builder: give a button an icon, label, count and timer text.
+-- Region builder: square button = border + dark bg + icon (+ corner glyphs).
 ----------------------------------------------------------------------
-local function decorate(btn, w, h)
-	btn:SetSize(w, h)
+local function decorate(btn)
+	btn:SetSize(SIZE, SIZE)
 
-	local bg = btn:CreateTexture(nil, "BACKGROUND")
+	local ring = btn:CreateTexture(nil, "BACKGROUND", nil, -2)
+	ring:SetPoint("TOPLEFT", -1, 1)
+	ring:SetPoint("BOTTOMRIGHT", 1, -1)
+	ring:SetColorTexture(unpack(BORDER_NEUTRAL))
+	btn.ring = ring
+
+	local bg = btn:CreateTexture(nil, "BACKGROUND", nil, -1)
 	bg:SetAllPoints()
-	bg:SetColorTexture(0, 0, 0, 0.5)
+	bg:SetColorTexture(0, 0, 0, 0.85)
 	btn.bg = bg
 
 	local icon = btn:CreateTexture(nil, "ARTWORK")
-	icon:SetSize(h - 4, h - 4)
-	icon:SetPoint("LEFT", 2, 0)
-	icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	icon:SetAllPoints()
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	btn.icon = icon
 
+	-- assigned-blessing glyph, bottom-right corner (class buttons only)
 	local bless = btn:CreateTexture(nil, "OVERLAY")
-	bless:SetSize(h - 8, h - 8)
-	bless:SetPoint("RIGHT", -2, 0)
-	bless:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	bless:SetSize(14, 14)
+	bless:SetPoint("BOTTOMRIGHT", 1, -1)
+	bless:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	btn.bless = bless
 
-	local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	label:SetPoint("LEFT", icon, "RIGHT", 3, 4)
-	btn.label = label
-
-	local timer = btn:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	timer:SetPoint("LEFT", icon, "RIGHT", 3, -7)
+	local timer = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	timer:SetPoint("BOTTOMLEFT", 2, 1)
+	local font, size = timer:GetFont()
+	timer:SetFont(font, size, "THICKOUTLINE")     -- wide black stroke around the glyphs
+	timer:SetShadowColor(0, 0, 0, 1)
+	timer:SetShadowOffset(1, -1)
 	btn.timer = timer
 
+	local hl = btn:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetAllPoints()
+	hl:SetColorTexture(1, 1, 1, 0.20)
 	return btn
+end
+
+-- Hook (not Set) so we never clobber any secure handler scripts on the frame.
+local function tooltip(btn, getText)
+	btn:HookScript("OnEnter", function(self)
+		if PS.opt.hideTooltips then return end
+		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+		GameTooltip:SetText(getText(self) or "")
+		GameTooltip:Show()
+	end)
+	btn:HookScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
 ----------------------------------------------------------------------
@@ -54,97 +95,103 @@ end
 function PS:CreateButtons()
 	local parent = PS.frame
 
-	-- Auto-buff button (casts the next needed blessing across all classes)
-	local auto = CreateFrame("Button", "PallySquireAuto", parent, SECURE)
-	decorate(auto, BW, BH)
-	auto.icon:SetTexture("Interface\\Icons\\Spell_Holy_GreaterBlessingofKings")
-	auto.label:SetText(ns.L["Auto Buff"])
+	-- Auto-buff (casts the next needed blessing across all classes)
+	local auto = CreateFrame("Button", "PallySquireAuto", parent, CONTROL_SECURE)
+	decorate(auto)
+	auto.icon:SetTexture(AUTO_ICON)
+	auto.bless:Hide(); auto.timer:Hide()
 	auto:RegisterForClicks("AnyDown")
 	auto:SetScript("PostClick", function() if not InCombatLockdown() then PS:UpdateLayout() end end)
-	auto:SetScript("OnEnter", function(self)
-		if PS.opt.hideTooltips then return end
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine(ns.L["AUTO_TOOLTIP"], 1, 1, 1)
-		GameTooltip:Show()
-	end)
-	auto:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	tooltip(auto, function() return ns.L["Auto Buff"] .. "\n" .. ns.L["AUTO_TOOLTIP"] end)
 	PS.autoButton = auto
 
-	-- Aura button (cast selected aura on self; wheel cycles selection)
-	local aura = CreateFrame("Button", "PallySquireAura", parent, SECURE)
-	decorate(aura, BW, BH)
+	-- Aura (cast selected aura on self; wheel cycles selection)
+	local aura = CreateFrame("Button", "PallySquireAura", parent, CONTROL_SECURE)
+	decorate(aura)
+	aura.bless:Hide(); aura.timer:Hide()
 	aura:RegisterForClicks("AnyDown")
 	aura:EnableMouseWheel(true)
 	aura:SetAttribute("unit", "player")
 	aura:SetScript("OnMouseWheel", function(_, delta)
 		if InCombatLockdown() then return end
-		local n = ns.MAX_AURAS
-		PS.opt.aura = ((PS.opt.aura - 1 + (delta > 0 and 1 or -1)) % n) + 1
-		PS:UpdateLayout()
+		-- cycle the (synced) aura assignment, staying within 1..MAX
+		local cur = ns.GetAura(PS.player)
+		cur = ((cur - 1 + (delta > 0 and 1 or -1)) % ns.MAX_AURAS) + 1
+		PS:BroadcastAura(PS.player, cur)
+	end)
+	tooltip(aura, function()
+		local a = ns.GetAura(PS.player)
+		return a > 0 and ns.AuraName[a] or "No aura selected"
 	end)
 	PS.auraButton = aura
 
-	-- Seal button (cast selected seal; wheel cycles; right-click toggles RF)
-	local seal = CreateFrame("Button", "PallySquireSeal", parent, SECURE)
-	decorate(seal, BW, BH)
+	-- Seal (cast selected seal; wheel cycles selection)
+	local seal = CreateFrame("Button", "PallySquireSeal", parent, CONTROL_SECURE)
+	decorate(seal)
+	seal.bless:Hide(); seal.timer:Hide()
 	seal:RegisterForClicks("AnyDown")
 	seal:EnableMouseWheel(true)
 	seal:SetAttribute("unit", "player")
 	seal:SetScript("OnMouseWheel", function(_, delta)
 		if InCombatLockdown() then return end
-		local n = #ns.SealDef
-		PS.opt.seal = ((PS.opt.seal - 1 + (delta > 0 and 1 or -1)) % n) + 1
+		PS.opt.seal = ((PS.opt.seal - 1 + (delta > 0 and 1 or -1)) % #ns.SealDef) + 1
 		PS:UpdateLayout()
 	end)
+	tooltip(seal, function() return ns.SealName[PS.opt.seal] or "Seal" end)
 	PS.sealButton = seal
 
 	-- Class buttons + their player pop-outs
 	PS.classButtons = {}
 	PS.playerButtons = {}
 	for c = 1, ns.MAX_CLASSES do
-		local cb = CreateFrame("Button", "PallySquireClass" .. c, parent, SECURE)
-		decorate(cb, BW, BH)
+		local cb = CreateFrame("Button", "PallySquireClass" .. c, parent, CONTROL_SECURE)
+		decorate(cb)
 		cb.icon:SetTexture(ns.ClassIcons[c])
 		cb:RegisterForClicks("AnyDown")
-		cb:SetScript("PostClick", function() if not InCombatLockdown() then PS:UpdateLayout() end end)
+		-- PostClick is insecure (runs after the cast): left re-arms, right toggles pop-outs.
+		cb:SetScript("PostClick", function(_, button)
+			if InCombatLockdown() then return end
+			if button == "RightButton" then
+				PS:TogglePopouts(c)
+			else
+				PS:UpdateLayout()
+			end
+		end)
+		tooltip(cb, function() return ns.ClassID[c] end)
 		cb:Hide()
-		cb:Execute([[childs = newtable()]])
 		PS.classButtons[c] = cb
 
 		local players = {}
 		for p = 1, ns.MAX_PER_CLASS do
 			local pb = CreateFrame("Button", "PallySquireClass" .. c .. "P" .. p, cb, "SecureActionButtonTemplate")
-			decorate(pb, BW, BH - 2)
+			decorate(pb)
+			pb.bless:Hide()
 			pb:SetFrameStrata("DIALOG")
 			pb:RegisterForClicks("AnyDown")
 			pb:SetAttribute("Display", 0)
 			pb:Hide()
-			-- register as a child of the class button for the secure hover reveal
-			SecureHandlerSetFrameRef(cb, "child", pb)
-			SecureHandlerExecute(cb, [[
-				local child = self:GetFrameRef("child")
-				childs[#childs + 1] = child
-			]])
+			pb.classId = c
+			tooltip(pb, function(self) return self.unitName end)
+			-- right-click a pop-out to set that character's blessing override
+			pb:SetScript("PostClick", function(self, button)
+				if button == "RightButton" and not InCombatLockdown() and self.unitName then
+					PS:OpenOverrideFlyout(self.classId, self.unitName, self)
+				end
+			end)
 			players[p] = pb
 		end
 		PS.playerButtons[c] = players
+	end
+end
 
-		-- Secure hover: show mapped pop-outs, auto-hide when cursor leaves chain.
-		cb:SetAttribute("_onenter", [[
-			local lead
-			for _, child in ipairs(childs) do
-				if child:GetAttribute("Display") == 1 then
-					child:Show()
-					if lead then
-						lead:AddToAutoHide(child)
-					else
-						lead = child
-						lead:RegisterAutoHide(0.75)
-					end
-				end
-			end
-			if lead then lead:AddToAutoHide(self) end
-		]])
+-- Toggle a class's player pop-outs (out of combat; protected frames can't be
+-- shown/hidden mid-combat from insecure code).
+function PS:TogglePopouts(classId)
+	if InCombatLockdown() then return end
+	local cb = PS.classButtons[classId]
+	cb.popoutsShown = not cb.popoutsShown
+	for _, pb in ipairs(PS.playerButtons[classId]) do
+		pb:SetShown(cb.popoutsShown and pb:GetAttribute("Display") == 1)
 	end
 end
 
@@ -158,8 +205,20 @@ local function setCast(btn, spell, unit)
 	if unit then btn:SetAttribute("unit", unit) end
 end
 
-local function colorFor(missing, total)
-	if total == 0 then return 0.25, 0.25, 0.25 end
+-- Class buttons: left-click casts, right-click is reserved for the fly-out
+-- toggle (so it must NOT cast). Arm only the left button.
+local function setClassCast(btn, spell, unit)
+	if InCombatLockdown() then return end
+	btn:SetAttribute("type", nil)
+	btn:SetAttribute("type1", spell and "spell" or nil)
+	btn:SetAttribute("spell1", spell or "")
+	btn:SetAttribute("type2", nil)
+	if unit then btn:SetAttribute("unit", unit) end
+end
+
+-- Border color for a class button by buff coverage.
+local function ringColor(missing, total)
+	if total == 0 then return unpack(BORDER_NEUTRAL) end
 	if missing == 0 then return unpack(ns.Color.good) end
 	if missing >= total then return unpack(ns.Color.needsAll) end
 	return unpack(ns.Color.needsSome)
@@ -168,6 +227,8 @@ end
 ----------------------------------------------------------------------
 -- Layout: structural placement + secure attribute (re)arming. Out of combat.
 ----------------------------------------------------------------------
+local STEP = SIZE + PAD
+
 function PS:UpdateLayout()
 	if not PS.classButtons then return end
 	if InCombatLockdown() then
@@ -178,66 +239,83 @@ function PS:UpdateLayout()
 	ns.layoutPending = false
 
 	local frame = PS.frame
-	local y = -PAD
-	local width = BW + PAD * 2
+	local top = -(ns.HEADER_H or 0) - MARGIN
 
-	-- Top control row: auto / aura / seal stacked.
-	PS.autoButton:ClearAllPoints()
-	PS.autoButton:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, y)
-	local auto, autoSpell = ns.NextTarget()
-	setCast(PS.autoButton, auto and autoSpell, auto and auto.unitid)
-	y = y - (BH + PAD)
+	-- Row 1: controls (Auto Buff / Aura / Seal all toggleable)
+	local controls = {}
+	if PS.opt.showAuto then controls[#controls + 1] = PS.autoButton else PS.autoButton:Hide() end
+	if PS.opt.showAura then controls[#controls + 1] = PS.auraButton else PS.auraButton:Hide() end
+	if PS.opt.showSeal then controls[#controls + 1] = PS.sealButton else PS.sealButton:Hide() end
+	for i, b in ipairs(controls) do
+		b:ClearAllPoints()
+		b:SetPoint("TOPLEFT", frame, "TOPLEFT", MARGIN + (i - 1) * STEP, top)
+		b:Show()
+	end
+	local hasControls = #controls > 0
 
-	-- Aura
-	PS.auraButton:ClearAllPoints()
-	PS.auraButton:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, y)
-	local auraName = ns.AuraName[PS.opt.aura]
-	PS.auraButton.icon:SetTexture(ns.AuraDef[PS.opt.aura] and ns.AuraDef[PS.opt.aura].icon)
-	PS.auraButton.label:SetText(auraName or "")
-	setCast(PS.auraButton, auraName, "player")
-	y = y - (BH + PAD)
+	if PS.opt.showAuto then
+		local auto, autoSpell = ns.NextTarget()
+		setCast(PS.autoButton, auto and autoSpell, auto and auto.unitid)
+	end
+	if PS.opt.showAura then
+		local aura = ns.GetAura(PS.player)
+		local auraName = aura > 0 and ns.AuraName[aura] or nil
+		PS.auraButton.icon:SetTexture(aura > 0 and ns.AuraDef[aura] and ns.AuraDef[aura].icon or NONE_ICON)
+		PS.auraButton.icon:SetDesaturated(aura == 0)   -- greyed out when none selected
+		setCast(PS.auraButton, auraName, "player")
+	end
+	if PS.opt.showSeal then
+		local sealName = ns.SealName[PS.opt.seal]
+		PS.sealButton.icon:SetTexture(ns.SpellIcon(ns.SealDef[PS.opt.seal] and ns.SealDef[PS.opt.seal].id))
+		setCast(PS.sealButton, sealName, "player")
+	end
 
-	-- Seal
-	PS.sealButton:ClearAllPoints()
-	PS.sealButton:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, y)
-	local sealName = ns.SealName[PS.opt.seal]
-	PS.sealButton.icon:SetTexture(ns.SpellIcon(ns.SealDef[PS.opt.seal] and ns.SealDef[PS.opt.seal].id))
-	PS.sealButton.label:SetText(sealName or "")
-	setCast(PS.sealButton, sealName, "player")
-	y = y - (BH + PAD)
-
-	-- Class rows (only classes present)
+	-- Row 2+: class buttons (only classes present), wrapped into a grid
+	local classTop = top - (hasControls and STEP or 0)
+	local cols = classColumns()
+	local shown = 0
 	for c = 1, ns.MAX_CLASSES do
 		local cb = PS.classButtons[c]
-		local count = ns.classlist[c] or 0
-		if count > 0 then
+		if (ns.classlist[c] or 0) > 0 then
+			local gridCol = shown % cols
+			local gridRow = math.floor(shown / cols)
 			cb:ClearAllPoints()
-			cb:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, y)
+			cb:SetPoint("TOPLEFT", frame, "TOPLEFT", MARGIN + gridCol * STEP, classTop - gridRow * STEP)
 			cb:Show()
-			-- arm class button to the next-needed unit of this class
+			shown = shown + 1
+
+			-- Prefer the next member who needs the buff; if all are covered,
+			-- still arm the button to refresh the first member so left-click
+			-- always casts when a blessing is assigned to this class.
 			local entry, spell = ns.NextTarget(c)
-			setCast(cb, entry and spell, entry and entry.unitid)
-			-- wire player pop-outs
+			if not entry then
+				local slot = ns.GetAssign(PS.player, c)
+				if slot > 0 and ns.IsSpellKnown(ns.BlessingDef[slot].id) then
+					local first = ns.classes[c][1]
+					if first then entry, spell = first, ns.BlessingName[slot] end
+				end
+			end
+			setClassCast(cb, entry and spell, entry and entry.unitid)
+
 			local players = PS.playerButtons[c]
 			local entries = ns.classes[c]
 			for p = 1, ns.MAX_PER_CLASS do
 				local pb = players[p]
 				local e = PS.opt.showPlayerButtons and entries[p] or nil
 				if e then
-					-- stack pop-outs vertically off the right edge of the class button
 					pb:ClearAllPoints()
-					pb:SetPoint("TOPLEFT", cb, "TOPRIGHT", PAD, -(p - 1) * (BH - 2 + PAD))
+					pb:SetPoint("TOP", cb, "BOTTOM", 0, -PAD - (p - 1) * STEP)
 					pb.icon:SetTexture(ns.ClassIcons[c])
-					pb.label:SetText(e.name)
+					pb.unitName = e.name
 					local pspell, punit = ns.PlayerCast(e)
-					setCast(pb, pspell, punit or e.unitid)
+					setClassCast(pb, pspell, punit or e.unitid)  -- left casts; right = override flyout
 					pb:SetAttribute("Display", 1)
+					pb:SetShown(cb.popoutsShown and true or false)
 				else
 					pb:SetAttribute("Display", 0)
 					pb:Hide()
 				end
 			end
-			y = y - (BH + PAD)
 		else
 			cb:Hide()
 			for p = 1, ns.MAX_PER_CLASS do
@@ -248,34 +326,58 @@ function PS:UpdateLayout()
 		end
 	end
 
-	local height = -y + PAD
-	frame:SetSize(width, math.max(height, 30))
+	-- Size frame: 1 control row + however many class-grid rows we used.
+	local classRows = math.ceil(shown / cols)
+	local usedCols = math.max(#controls, math.min(cols, math.max(shown, 1)))
+	local width = 2 * MARGIN + usedCols * STEP - PAD
+	local height = (ns.HEADER_H or 0) + 2 * MARGIN + ((hasControls and 1 or 0) + classRows) * STEP - PAD
+	frame:SetSize(width, height)
 	PS:UpdateVisuals()
 end
 
 ----------------------------------------------------------------------
--- Visuals: colors / counts / timers. Safe to run in combat.
+-- Visuals: border color / blessing glyph / timer. Safe to run in combat.
 ----------------------------------------------------------------------
 local function fmtTime(remaining)
 	if not remaining or remaining <= 0 then return "" end
-	if remaining >= 60 then return string.format("%dm", math.floor(remaining / 60 + 0.5)) end
-	return string.format("%ds", math.floor(remaining))
+	if remaining >= 60 then return string.format("%d", math.floor(remaining / 60 + 0.5)) .. "m" end
+	return string.format("%d", math.floor(remaining)) .. "s"
+end
+
+-- Border for a self-buff control (aura / seal): green if active on you, red if not.
+local function selfRing(btn, name)
+	if name and ns.FindBuff("player", name) then
+		btn.ring:SetColorTexture(unpack(ns.Color.good))
+	else
+		btn.ring:SetColorTexture(unpack(ns.Color.needsAll))
+	end
 end
 
 function PS:UpdateVisuals()
 	if not PS.classButtons then return end
+
+	local selAura = ns.GetAura(PS.player)
+	if selAura > 0 then
+		selfRing(PS.auraButton, ns.AuraName[selAura])
+	else
+		PS.auraButton.ring:SetColorTexture(unpack(BORDER_NEUTRAL))  -- none selected: neutral
+	end
+	selfRing(PS.sealButton, ns.SealName[PS.opt.seal])
+
 	for c = 1, ns.MAX_CLASSES do
 		local cb = PS.classButtons[c]
 		if cb:IsShown() then
 			local missing, total = ns.ClassNeed(c)
-			cb.bg:SetColorTexture(colorFor(missing, total))
-			cb.label:SetText(string.format("%s  %d/%d", ns.ClassID[c], total - missing, total))
+			cb.ring:SetColorTexture(ringColor(missing, total))
 
-			-- assigned blessing icon (my class assignment)
-			local slot = ns.GetAssign(PS.player, c)
-			cb.bless:SetTexture(slot > 0 and ns.BlessingDef[slot] and ns.BlessingDef[slot].icon or nil)
+			local slot = ns.demoActive and (ns.demoAssign[c] or 0) or ns.GetAssign(PS.player, c)
+			if slot > 0 and ns.BlessingDef[slot] then
+				cb.bless:SetTexture(ns.BlessingDef[slot].icon)
+				cb.bless:Show()
+			else
+				cb.bless:Hide()
+			end
 
-			-- soonest expiry across the class
 			local soonest
 			for _, e in ipairs(ns.classes[c] or {}) do
 				if e.hasbuff and e.expiration then

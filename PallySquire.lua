@@ -54,9 +54,16 @@ function ns.SpellIcon(spellID)
 end
 
 -- Is a spell known/usable by the player right now?
+-- The ids in our data are rank 1 (e.g. Devotion Aura 465), but a max-level
+-- paladin knows a higher rank, so IsSpellKnown(rank1) is false. Fall back to a
+-- name lookup: GetSpellInfo(name) only resolves spells that are in the spellbook.
 function ns.IsSpellKnown(spellID)
-	if IsPlayerSpell and IsPlayerSpell(spellID) then return true end
-	return IsSpellKnown and IsSpellKnown(spellID) or false
+	if not spellID then return false end
+	if (IsPlayerSpell and IsPlayerSpell(spellID)) or (IsSpellKnown and IsSpellKnown(spellID)) then
+		return true
+	end
+	local name = ns.SpellName(spellID)
+	return name ~= nil and GetSpellInfo ~= nil and GetSpellInfo(name) ~= nil
 end
 
 -- Find a helpful aura by name on a unit. Returns the aura data table or nil.

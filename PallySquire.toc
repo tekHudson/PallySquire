@@ -1,10 +1,10 @@
-## Interface: 11507
+## Interface: 11508
 ## Title: PallySquire
 ## Notes: Clean, SoD-native paladin blessing manager with cross-paladin assignment sync.
 ## Author: tek
 ## Version: 0.1.0
 ## DefaultState: enabled
-## IconTexture: Interface\Icons\Spell_Holy_GreaterBlessingofKings
+## IconTexture: Interface\AddOns\PallySquire\Icons\Icon
 ## SavedVariables: PallySquireDB, PallySquire_Assignments, PallySquire_NormalAssignments, PallySquire_AuraAssignments, PallySquire_Presets
 
 # Bootstrap (namespace, utils, event dispatch)

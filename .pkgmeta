@@ -1,0 +1,19 @@
+package-as: PallySquire
+
+enable-nolib-creation: no
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# Libraries are pure-Lua and vendored where needed (none required yet), so no
+# externals section is necessary.
+
+ignore:
+  - .github
+  - .gitignore
+  - README.md
+  - Icons/bg_gemburst.png
+  - Icons/bg_icon_256.png
+  - Icons/bg_icon_64.png
+  - Icons/Icon256.tga

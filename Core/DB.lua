@@ -15,17 +15,19 @@ local DEFAULTS = {
 	-- display / behavior
 	locked        = false,
 	scale         = 1.0,
+	layout        = "grid",  -- class-button arrangement: "grid" (3 wide) | "vertical" | "horizontal"
 	showPlayerButtons = true,
+	showAuto      = true,    -- show the Auto Buff button
+	showAura      = true,    -- show the Aura button
+	showSeal      = true,    -- show the Seal button
 	buffDuration  = true,    -- show remaining-time text
 	hideTooltips  = false,
 	freeassign    = false,   -- let non-leaders change my assignment
 	smartBuffs    = true,    -- auto-fall-back when a class can't take its blessing
-	autobuff      = true,    -- enable the auto-buff button
 	minimap       = { hide = false, angle = 200 },
 	-- frame position (nil until first move -> centered)
 	pos           = nil,
-	-- personal selections
-	aura          = 1,
+	-- personal selections (aura is stored as a synced assignment, not here)
 	seal          = 1,
 	rf            = false,
 	debug         = false,

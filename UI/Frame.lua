@@ -8,6 +8,8 @@ assignment config.
 local ADDON, ns = ...
 local PS = ns.PS
 
+ns.HEADER_H = 20   -- title/drag strip height; UI/Buttons offsets the stack below it
+
 local BACKDROP = {
 	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
 	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -54,6 +56,76 @@ function PS:CreateMainFrame()
 	end)
 	f:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+	-- Drag handle: a strip across the top that the cast buttons don't cover.
+	local header = CreateFrame("Frame", "PallySquireHeader", f)
+	header:SetPoint("TOPLEFT", 3, -3)
+	header:SetPoint("TOPRIGHT", -3, -3)
+	header:SetHeight(ns.HEADER_H)
+	header:EnableMouse(true)
+	header:RegisterForDrag("LeftButton")
+
+	-- centered title (doubles as the drag label)
+	local htitle = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	htitle:SetPoint("CENTER")
+	htitle:SetText("PallySquire")
+
+	-- gear button (top-left) opens options
+	local gear = CreateFrame("Button", nil, header)
+	gear:SetSize(16, 16)
+	gear:SetPoint("LEFT", 1, 0)
+	gear:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+	local gh = gear:CreateTexture(nil, "HIGHLIGHT")
+	gh:SetAllPoints()
+	gh:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+	gh:SetBlendMode("ADD")
+	gear:SetScript("OnClick", function() PS:OpenOptions() end)
+	gear:SetScript("OnEnter", function(self)
+		if PS.opt.hideTooltips then return end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText(ns.L["Options"])
+		GameTooltip:Show()
+	end)
+	gear:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+	-- assignments button (top-right) opens the Assignments window
+	local assign = CreateFrame("Button", nil, header)
+	assign:SetSize(16, 16)
+	assign:SetPoint("RIGHT", -1, 0)
+	assign:SetNormalTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+	local ah = assign:CreateTexture(nil, "HIGHLIGHT")
+	ah:SetAllPoints()
+	ah:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+	ah:SetBlendMode("ADD")
+	assign:SetScript("OnClick", function() PS:ToggleConfig() end)
+	assign:SetScript("OnEnter", function(self)
+		if PS.opt.hideTooltips then return end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText(ns.L["Assignments"])
+		GameTooltip:Show()
+	end)
+	assign:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+	header:SetScript("OnDragStart", function()
+		if not PS.opt.locked then f:StartMoving() end
+	end)
+	header:SetScript("OnDragStop", function()
+		f:StopMovingOrSizing()
+		local point, _, relPoint, x, y = f:GetPoint()
+		PS.opt.pos = { point = point, relPoint = relPoint, x = x, y = y }
+	end)
+	header:SetScript("OnMouseUp", function(_, button)
+		if button == "RightButton" then PS:ToggleConfig() end
+	end)
+	header:SetScript("OnEnter", function(self)
+		if PS.opt.hideTooltips then return end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine("PallySquire")
+		GameTooltip:AddLine(ns.L["DRAG_TOOLTIP"], 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	header:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	f.header = header
+
 	PS.frame = f
 end
 
@@ -84,7 +156,7 @@ function PS:CreateMinimap()
 
 	local icon = b:CreateTexture(nil, "BACKGROUND")
 	icon:SetSize(20, 20)
-	icon:SetTexture("Interface\\Icons\\Spell_Holy_GreaterBlessingofKings")
+	icon:SetTexture("Interface\\AddOns\\PallySquire\\Icons\\Icon")
 	icon:SetPoint("TOPLEFT", 7, -6)
 
 	local function reposition()

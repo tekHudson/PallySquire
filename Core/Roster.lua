@@ -93,6 +93,56 @@ function PS:UpdateRoster()
 end
 
 ----------------------------------------------------------------------
+-- Demo mode: fake a full raid so the bar can be previewed solo.
+-- Purely visual — never touches saved assignments, never sends comms.
+----------------------------------------------------------------------
+local DEMO_COUNTS  = { 8, 5, 6, 4, 2, 5, 5, 4, 0 }  -- members per class (PET=0)
+local DEMO_BLESS   = { 2, 2, 1, 3, 4, 1, 1, 1, 0 }  -- assigned blessing slot per class
+
+ns.demoActive = false
+ns.demoAssign = {}
+
+function PS:BuildDemoRoster()
+	for i = 1, ns.MAX_CLASSES do
+		classlist[i] = 0
+		classes[i] = classes[i] or {}
+		twipe(classes[i])
+		ns.demoAssign[i] = DEMO_BLESS[i]
+	end
+	twipe(roster)
+	local now = GetTime()
+	for c = 1, ns.MAX_CLASSES do
+		local n = math.min(DEMO_COUNTS[c] or 0, ns.MAX_PER_CLASS)
+		for j = 1, n do
+			local has = (j % 3) ~= 0                 -- ~1/3 missing their buff
+			local e = {
+				name = ns.ClassID[c] .. j, unitid = "none",  -- invalid unit => clicks are no-ops
+				classId = c, classToken = ns.ClassID[c],
+				online = true, visible = true, dead = false, inrange = true,
+				slot = DEMO_BLESS[c],
+				hasbuff = has,
+				expiration = has and (now + 60 + j * 25) or nil,
+			}
+			tinsert(classes[c], e)
+			classlist[c] = classlist[c] + 1
+			tinsert(roster, e)
+		end
+	end
+	PS:UpdateLayout()
+end
+
+-- Toggle demo mode on/off.
+function PS:SetDemo(on)
+	ns.demoActive = on and true or false
+	if ns.demoActive then
+		PS:BuildDemoRoster()
+	else
+		PS:UpdateRoster()
+	end
+	if PS.configFrame and PS.configFrame:IsShown() then PS:RebuildConfigRows() end
+end
+
+----------------------------------------------------------------------
 -- Per-unit buff state (called frequently; cheap)
 ----------------------------------------------------------------------
 
@@ -129,6 +179,7 @@ function PS:ScanClass(classId)
 end
 
 function PS:ScanAllClasses()
+	if ns.demoActive then return end   -- keep the fake demo state intact
 	for i = 1, ns.MAX_CLASSES do PS:ScanClass(i) end
 end
 
@@ -172,13 +223,16 @@ end
 -- Event handlers
 ----------------------------------------------------------------------
 function PS:GROUP_ROSTER_UPDATE()
+	if ns.demoActive then return end
 	PS:UpdateRoster()
 	PS:ScanSelf()
 	PS:SendSelf()
 	PS:RequestSync()
+	if PS.configFrame and PS.configFrame:IsShown() then PS:RebuildConfigRows() end
 end
 
 function PS:PLAYER_ENTERING_WORLD()
+	if ns.demoActive then return end
 	PS:UpdateRoster()
 end
 
