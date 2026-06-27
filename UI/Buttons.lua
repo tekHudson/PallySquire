@@ -1,15 +1,14 @@
 --[[ PallySquire — secure action buttons, layout, and visual refresh.
 
 Compact icon-only action bar built in Lua. Cast wiring uses
-SecureActionButtonTemplate: out of combat we set each button's spell/unit
-attributes so a click performs a single-target blessing. Player pop-out
-buttons (fixed unit) stay castable in combat; class/auto buttons only re-arm
-out of combat. Right-clicking a class button toggles its player pop-outs (set
-up out of combat; they persist into combat once shown).
+SecureActionButtonTemplate: out of combat we set each class button's two
+actions — LEFT = Greater Blessing (cast on one in-range class member, the game
+splashes it to the rest), RIGHT = Normal single-target blessing on the next
+member who needs it. Buttons only re-arm out of combat.
 
-Layout: row of controls (auto / aura / seal), then a row of class buttons.
-Every button shares one dark background; class need-state is shown as a
-colored BORDER, never a full fill, so the bar reads consistently.
+Layout: row of controls (auto / aura / seal / RF), then a grid of class
+buttons. Every button shares one dark background; class need-state is shown as
+a colored BORDER plus a red icon tint when missing.
 ]]
 
 local ADDON, ns = ...
@@ -102,7 +101,7 @@ function PS:CreateButtons()
 	auto.bless:Hide(); auto.timer:Hide()
 	auto:RegisterForClicks("AnyDown")
 	auto:SetScript("PostClick", function() if not InCombatLockdown() then PS:UpdateLayout() end end)
-	tooltip(auto, function() return ns.L["Auto Buff"] .. "\n" .. ns.L["AUTO_TOOLTIP"] end)
+	tooltip(auto, function() return ns.L["Auto Buff"] .. "\n|cffaaaaaaLeft: Greater   Right: Normal|r" end)
 	PS.autoButton = auto
 
 	-- Aura (cast selected aura on self; wheel cycles selection)
@@ -149,58 +148,18 @@ function PS:CreateButtons()
 	tooltip(rf, function() return ns.RFName or "Righteous Fury" end)
 	PS.rfButton = rf
 
-	-- Class buttons + their player pop-outs
+	-- Class buttons: left-click casts the Greater Blessing (whole class),
+	-- right-click casts the Normal single-target blessing on the next member.
 	PS.classButtons = {}
-	PS.playerButtons = {}
 	for c = 1, ns.MAX_CLASSES do
 		local cb = CreateFrame("Button", "PallySquireClass" .. c, parent, CONTROL_SECURE)
 		decorate(cb)
 		cb.icon:SetTexture(ns.ClassIcons[c])
 		cb:RegisterForClicks("AnyDown")
-		-- PostClick is insecure (runs after the cast): left re-arms, right toggles pop-outs.
-		cb:SetScript("PostClick", function(_, button)
-			if InCombatLockdown() then return end
-			if button == "RightButton" then
-				PS:TogglePopouts(c)
-			else
-				PS:UpdateLayout()
-			end
-		end)
-		tooltip(cb, function() return ns.ClassID[c] end)
+		cb:SetScript("PostClick", function() if not InCombatLockdown() then PS:UpdateLayout() end end)
+		tooltip(cb, function() return ns.ClassID[c] .. "\n|cffaaaaaaLeft: Greater   Right: Normal|r" end)
 		cb:Hide()
 		PS.classButtons[c] = cb
-
-		local players = {}
-		for p = 1, ns.MAX_PER_CLASS do
-			local pb = CreateFrame("Button", "PallySquireClass" .. c .. "P" .. p, cb, "SecureActionButtonTemplate")
-			decorate(pb)
-			pb.bless:Hide()
-			pb:SetFrameStrata("DIALOG")
-			pb:RegisterForClicks("AnyDown")
-			pb:SetAttribute("Display", 0)
-			pb:Hide()
-			pb.classId = c
-			tooltip(pb, function(self) return self.unitName end)
-			-- right-click a pop-out to set that character's blessing override
-			pb:SetScript("PostClick", function(self, button)
-				if button == "RightButton" and not InCombatLockdown() and self.unitName then
-					PS:OpenOverrideFlyout(self.classId, self.unitName, self)
-				end
-			end)
-			players[p] = pb
-		end
-		PS.playerButtons[c] = players
-	end
-end
-
--- Toggle a class's player pop-outs (out of combat; protected frames can't be
--- shown/hidden mid-combat from insecure code).
-function PS:TogglePopouts(classId)
-	if InCombatLockdown() then return end
-	local cb = PS.classButtons[classId]
-	cb.popoutsShown = not cb.popoutsShown
-	for _, pb in ipairs(PS.playerButtons[classId]) do
-		pb:SetShown(cb.popoutsShown and pb:GetAttribute("Display") == 1)
 	end
 end
 
@@ -214,15 +173,17 @@ local function setCast(btn, spell, unit)
 	if unit then btn:SetAttribute("unit", unit) end
 end
 
--- Class buttons: left-click casts, right-click is reserved for the fly-out
--- toggle (so it must NOT cast). Arm only the left button.
-local function setClassCast(btn, spell, unit)
+-- Dual-action cast: left button (1) = Greater, right button (2) = Normal.
+-- Each has its own spell and unit; a nil spell disables that button.
+local function setDualCast(btn, gSpell, gUnit, nSpell, nUnit)
 	if InCombatLockdown() then return end
 	btn:SetAttribute("type", nil)
-	btn:SetAttribute("type1", spell and "spell" or nil)
-	btn:SetAttribute("spell1", spell or "")
-	btn:SetAttribute("type2", nil)
-	if unit then btn:SetAttribute("unit", unit) end
+	btn:SetAttribute("type1", gSpell and "spell" or nil)
+	btn:SetAttribute("spell1", gSpell or "")
+	btn:SetAttribute("unit1", gUnit)
+	btn:SetAttribute("type2", nSpell and "spell" or nil)
+	btn:SetAttribute("spell2", nSpell or "")
+	btn:SetAttribute("unit2", nUnit)
 end
 
 -- Border color for a class button by buff coverage.
@@ -264,8 +225,10 @@ function PS:UpdateLayout()
 	local hasControls = #controls > 0
 
 	if PS.opt.showAuto then
-		local auto, autoSpell = ns.NextTarget()
-		setCast(PS.autoButton, auto and autoSpell, auto and auto.unitid)
+		-- left = next class needing its Greater; right = next member needing Normal
+		local gName, gUnit = ns.NextGreaterClass()
+		local nEntry, nSpell = ns.NextTarget()
+		setDualCast(PS.autoButton, gName, gUnit, nSpell, nEntry and nEntry.unitid)
 	end
 	if PS.opt.showAura then
 		local aura = ns.GetAura(PS.player)
@@ -298,45 +261,14 @@ function PS:UpdateLayout()
 			cb:Show()
 			shown = shown + 1
 
-			-- Prefer the next member who needs the buff; if all are covered,
-			-- still arm the button to refresh the first member so left-click
-			-- always casts when a blessing is assigned to this class.
-			local entry, spell = ns.NextTarget(c)
-			if not entry then
-				local slot = ns.GetAssign(PS.player, c)
-				if slot > 0 and ns.IsSpellKnown(ns.BlessingDef[slot].id) then
-					local first = ns.classes[c][1]
-					if first then entry, spell = first, ns.BlessingName[slot] end
-				end
-			end
-			setClassCast(cb, entry and spell, entry and entry.unitid)
-
-			local players = PS.playerButtons[c]
-			local entries = ns.classes[c]
-			for p = 1, ns.MAX_PER_CLASS do
-				local pb = players[p]
-				local e = PS.opt.showPlayerButtons and entries[p] or nil
-				if e then
-					pb:ClearAllPoints()
-					pb:SetPoint("TOP", cb, "BOTTOM", 0, -PAD - (p - 1) * STEP)
-					pb.icon:SetTexture(ns.ClassIcons[c])
-					pb.unitName = e.name
-					local pspell, punit = ns.PlayerCast(e)
-					setClassCast(pb, pspell, punit or e.unitid)  -- left casts; right = override flyout
-					pb:SetAttribute("Display", 1)
-					pb:SetShown(cb.popoutsShown and true or false)
-				else
-					pb:SetAttribute("Display", 0)
-					pb:Hide()
-				end
-			end
+			-- Left = Greater on a valid in-range member (splash covers the class).
+			-- Right = Normal on the next member who needs it (or a refresh target).
+			local gName, gUnit = ns.GreaterCast(c)
+			local entry, nSpell = ns.NextTarget(c)
+			if not entry then entry, nSpell = ns.NextRefreshTarget(c) end
+			setDualCast(cb, gName, gUnit, nSpell, entry and entry.unitid)
 		else
 			cb:Hide()
-			for p = 1, ns.MAX_PER_CLASS do
-				local pb = PS.playerButtons[c][p]
-				pb:SetAttribute("Display", 0)
-				pb:Hide()
-			end
 		end
 	end
 

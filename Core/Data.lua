@@ -41,13 +41,15 @@ ns.ClassIcons = {
 -- Blessings — assignable slot 1..8 (single-target). Base spell id per slot.
 -- Index order is the PallyPower wire contract; do not reorder.
 ----------------------------------------------------------------------
+-- `gid` is the Greater Blessing spell id (class-wide splash, Symbol of Kings,
+-- 15 min). Slots without a greater version (Sacrifice, Horn) omit it.
 ns.BlessingDef = {
-	[1] = { id = 19742,  icon = "Interface\\Icons\\Spell_Holy_SealOfWisdom",   key = "Blessing of Wisdom" },
-	[2] = { id = 19740,  icon = "Interface\\Icons\\Spell_Holy_FistOfJustice",  key = "Blessing of Might" },
-	[3] = { id = 20217,  icon = "Interface\\Icons\\Spell_Magic_MageArmor",     key = "Blessing of Kings" },
-	[4] = { id = 1038,   icon = "Interface\\Icons\\Spell_Holy_SealOfSalvation",key = "Blessing of Salvation" },
-	[5] = { id = 19977,  icon = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02", key = "Blessing of Light" },
-	[6] = { id = 20911,  icon = "Interface\\Icons\\Spell_Nature_LightningShield", key = "Blessing of Sanctuary" },
+	[1] = { id = 19742,  gid = 25894, icon = "Interface\\Icons\\Spell_Holy_SealOfWisdom",   key = "Blessing of Wisdom" },
+	[2] = { id = 19740,  gid = 25782, icon = "Interface\\Icons\\Spell_Holy_FistOfJustice",  key = "Blessing of Might" },
+	[3] = { id = 20217,  gid = 25898, icon = "Interface\\Icons\\Spell_Magic_MageArmor",     key = "Blessing of Kings" },
+	[4] = { id = 1038,   gid = 25895, icon = "Interface\\Icons\\Spell_Holy_SealOfSalvation",key = "Blessing of Salvation" },
+	[5] = { id = 19977,  gid = 25890, icon = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02", key = "Blessing of Light" },
+	[6] = { id = 20911,  gid = 25899, icon = "Interface\\Icons\\Spell_Nature_LightningShield", key = "Blessing of Sanctuary" },
 	[7] = { id = 6940,   icon = "Interface\\Icons\\Spell_Holy_SealOfSacrifice", key = "Blessing of Sacrifice" },
 	[8] = { id = 425600, icon = "Interface\\Icons\\Spell_Holy_PrayerOfFortitude", key = "Horn of Lordaeron" }, -- SoD
 }
@@ -91,13 +93,17 @@ ns.Color = {
 -- Called once after PLAYER_LOGIN, when spell data is available.
 ----------------------------------------------------------------------
 function PS:InitData()
-	ns.BlessingName = {}      -- slot -> localized name
-	ns.BlessingSlotByName = {} -- localized name -> slot
+	ns.BlessingName = {}        -- slot -> normal (single-target) name
+	ns.GreaterName = {}         -- slot -> Greater Blessing name (nil if none)
+	ns.BlessingSlotByName = {}  -- localized name -> slot
 	for slot, def in ipairs(ns.BlessingDef) do
 		local name = ns.SpellName(def.id) or def.key
 		ns.BlessingName[slot] = name
 		ns.BlessingSlotByName[name] = slot
 		def.name = name
+		if def.gid then
+			ns.GreaterName[slot] = ns.SpellName(def.gid)
+		end
 	end
 
 	ns.AuraName = {}

@@ -166,7 +166,11 @@ function PS:ScanClass(classId)
 		entry.slot = slot
 		if slot and slot > 0 then
 			local name = ns.BlessingName[slot]
+			-- buffed if they have the assigned blessing in normal OR greater form
 			local aura = ns.FindBuff(unit, name)
+			if not aura and ns.GreaterName[slot] then
+				aura = ns.FindBuff(unit, ns.GreaterName[slot])
+			end
 			entry.hasbuff = aura ~= nil
 			entry.expiration = aura and aura.expirationTime or nil
 			entry.inrange = ns.SpellInRange(name, unit)

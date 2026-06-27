@@ -16,7 +16,6 @@ local DEFAULTS = {
 	locked        = false,
 	scale         = 1.0,
 	layout        = "grid",  -- class-button arrangement: "grid" (3 wide) | "vertical" | "horizontal"
-	showPlayerButtons = true,
 	showAuto      = true,    -- show the Auto Buff button
 	showAura      = true,    -- show the Aura button
 	showSeal      = true,    -- show the Seal button

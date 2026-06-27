@@ -48,6 +48,55 @@ function ns.NextTarget(classId)
 	end
 end
 
+-- First member that's a VALID cast target ignoring whether they already have
+-- the buff (alive/online/visible/in-range/known). Used as the class-button
+-- fallback so left-click can refresh — but never fires on an out-of-range or
+-- otherwise invalid unit.
+function ns.NextRefreshTarget(classId)
+	for _, entry in ipairs(ns.classes[classId] or {}) do
+		if entry.slot and entry.slot > 0
+			and not entry.dead and entry.online and entry.visible and entry.inrange then
+			local def = ns.BlessingDef[entry.slot]
+			if def and ns.IsSpellKnown(def.id) then
+				return entry, ns.BlessingName[entry.slot]
+			end
+		end
+	end
+end
+
+-- For a Greater Blessing: the class's assigned slot must have a greater version
+-- the player knows, and there must be a valid in-range member to cast on (the
+-- splash covers the rest). Returns greaterSpellName, unitid.
+function ns.GreaterCast(classId)
+	local slot = ns.GetAssign(PS.player, classId)
+	if slot == 0 then return nil end
+	local def = ns.BlessingDef[slot]
+	local gname = ns.GreaterName[slot]
+	if not (gname and def and def.gid and ns.IsSpellKnown(def.gid)) then return nil end
+	for _, entry in ipairs(ns.classes[classId] or {}) do
+		if not entry.dead and entry.online and entry.visible and entry.inrange then
+			return gname, entry.unitid
+		end
+	end
+end
+
+-- First class that still needs its Greater Blessing (some member missing it)
+-- and can be cast right now. Returns greaterSpellName, unitid.
+function ns.NextGreaterClass()
+	for c = 1, ns.MAX_CLASSES do
+		local missing = 0
+		for _, e in ipairs(ns.classes[c] or {}) do
+			if e.slot and e.slot > 0 and not e.dead and e.online and not e.hasbuff then
+				missing = missing + 1
+			end
+		end
+		if missing > 0 then
+			local gname, unit = ns.GreaterCast(c)
+			if gname then return gname, unit end
+		end
+	end
+end
+
 -- The spell + unit to wire onto a single player's pop-out secure button.
 -- Always its own assigned blessing (used for in-combat single-target rebuff).
 function ns.PlayerCast(entry)

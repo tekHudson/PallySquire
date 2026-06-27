@@ -6,6 +6,23 @@ This project follows [Keep a Changelog](https://keepachangelog.com) and
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-27
+### Added
+- Greater Blessings: SoD paladins can train class-wide Greater Blessings, so
+  class buttons are now dual-action — LEFT casts the Greater on one in-range
+  member (the game splashes it to the whole class), RIGHT casts the Normal
+  single-target blessing on the next member who needs it. Auto Buff matches
+  (left = next class needing a greater, right = next member needing a normal).
+- Buff detection counts a member as covered if they have the assigned blessing
+  in either Normal or Greater form; greater's 15-min duration shows via the
+  live aura.
+### Changed
+- Removed the bar's per-player pop-out buttons; per-character overrides are now
+  set in the Assignments window's Characters columns.
+### Fixed
+- Class buttons no longer cast on an out-of-range or otherwise invalid member
+  as a fallback — they simply do nothing if there's no valid target.
+
 ## [0.1.2] - 2026-06-26
 ### Added
 - Righteous Fury button for tanking (opt-in via options). Left-click casts it;
