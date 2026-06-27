@@ -6,6 +6,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com) and
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-26
+### Added
+- Righteous Fury button for tanking (opt-in via options). Left-click casts it;
+  the border shows on/off (green = active, red = missing).
+- Missing buffs now tint the whole icon red, not just the border — applies to
+  aura, seal, Righteous Fury, and class buttons.
+
 ## [0.1.1] - 2026-06-26
 ### Fixed
 - Paladin-only: the addon now disables itself entirely on non-paladin

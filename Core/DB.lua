@@ -20,6 +20,7 @@ local DEFAULTS = {
 	showAuto      = true,    -- show the Auto Buff button
 	showAura      = true,    -- show the Aura button
 	showSeal      = true,    -- show the Seal button
+	showRF        = false,   -- show the Righteous Fury button (tanking)
 	buffDuration  = true,    -- show remaining-time text
 	hideTooltips  = false,
 	freeassign    = false,   -- let non-leaders change my assignment

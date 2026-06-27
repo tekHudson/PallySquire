@@ -55,6 +55,8 @@ function PS:CreateOptions()
 		function(v) PS.opt.showAura = v; PS:UpdateLayout() end)
 	check("Show Seal button", function() return PS.opt.showSeal end,
 		function(v) PS.opt.showSeal = v; PS:UpdateLayout() end)
+	check("Show Righteous Fury button (tanking)", function() return PS.opt.showRF end,
+		function(v) PS.opt.showRF = v; PS:UpdateLayout() end)
 	check("Show player pop-out buttons", function() return PS.opt.showPlayerButtons end,
 		function(v) PS.opt.showPlayerButtons = v; PS:UpdateLayout() end)
 	y = y - 8

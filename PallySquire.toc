@@ -2,7 +2,7 @@
 ## Title: PallySquire
 ## Notes: Clean, SoD-native paladin blessing manager with cross-paladin assignment sync.
 ## Author: tek
-## Version: 0.1.1
+## Version: 0.1.2
 ## DefaultState: enabled
 ## IconTexture: Interface\AddOns\PallySquire\Icons\Icon
 ## X-Curse-Project-ID: 1588196

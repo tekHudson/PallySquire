@@ -140,6 +140,15 @@ function PS:CreateButtons()
 	tooltip(seal, function() return ns.SealName[PS.opt.seal] or "Seal" end)
 	PS.sealButton = seal
 
+	-- Righteous Fury (tank threat buff; border shows on/off)
+	local rf = CreateFrame("Button", "PallySquireRF", parent, CONTROL_SECURE)
+	decorate(rf)
+	rf.bless:Hide(); rf.timer:Hide()
+	rf:RegisterForClicks("AnyDown")
+	rf:SetAttribute("unit", "player")
+	tooltip(rf, function() return ns.RFName or "Righteous Fury" end)
+	PS.rfButton = rf
+
 	-- Class buttons + their player pop-outs
 	PS.classButtons = {}
 	PS.playerButtons = {}
@@ -246,6 +255,7 @@ function PS:UpdateLayout()
 	if PS.opt.showAuto then controls[#controls + 1] = PS.autoButton else PS.autoButton:Hide() end
 	if PS.opt.showAura then controls[#controls + 1] = PS.auraButton else PS.auraButton:Hide() end
 	if PS.opt.showSeal then controls[#controls + 1] = PS.sealButton else PS.sealButton:Hide() end
+	if PS.opt.showRF   then controls[#controls + 1] = PS.rfButton   else PS.rfButton:Hide()   end
 	for i, b in ipairs(controls) do
 		b:ClearAllPoints()
 		b:SetPoint("TOPLEFT", frame, "TOPLEFT", MARGIN + (i - 1) * STEP, top)
@@ -268,6 +278,10 @@ function PS:UpdateLayout()
 		local sealName = ns.SealName[PS.opt.seal]
 		PS.sealButton.icon:SetTexture(ns.SpellIcon(ns.SealDef[PS.opt.seal] and ns.SealDef[PS.opt.seal].id))
 		setCast(PS.sealButton, sealName, "player")
+	end
+	if PS.opt.showRF then
+		PS.rfButton.icon:SetTexture(ns.SpellIcon(ns.RIGHTEOUS_FURY_ID))
+		setCast(PS.rfButton, ns.RFName, "player")
 	end
 
 	-- Row 2+: class buttons (only classes present), wrapped into a grid
@@ -344,12 +358,15 @@ local function fmtTime(remaining)
 	return string.format("%d", math.floor(remaining)) .. "s"
 end
 
--- Border for a self-buff control (aura / seal): green if active on you, red if not.
+-- A self-buff control (aura / seal / RF): green border if active, red border
+-- AND a red icon tint if it's missing.
 local function selfRing(btn, name)
 	if name and ns.FindBuff("player", name) then
 		btn.ring:SetColorTexture(unpack(ns.Color.good))
+		btn.icon:SetVertexColor(1, 1, 1)
 	else
 		btn.ring:SetColorTexture(unpack(ns.Color.needsAll))
+		btn.icon:SetVertexColor(1, 0.35, 0.35)
 	end
 end
 
@@ -361,14 +378,22 @@ function PS:UpdateVisuals()
 		selfRing(PS.auraButton, ns.AuraName[selAura])
 	else
 		PS.auraButton.ring:SetColorTexture(unpack(BORDER_NEUTRAL))  -- none selected: neutral
+		PS.auraButton.icon:SetVertexColor(1, 1, 1)
 	end
 	selfRing(PS.sealButton, ns.SealName[PS.opt.seal])
+	if PS.opt.showRF then selfRing(PS.rfButton, ns.RFName) end
 
 	for c = 1, ns.MAX_CLASSES do
 		local cb = PS.classButtons[c]
 		if cb:IsShown() then
 			local missing, total = ns.ClassNeed(c)
 			cb.ring:SetColorTexture(ringColor(missing, total))
+			-- tint the class icon red when one or more members need the blessing
+			if total > 0 and missing > 0 then
+				cb.icon:SetVertexColor(1, 0.35, 0.35)
+			else
+				cb.icon:SetVertexColor(1, 1, 1)
+			end
 
 			local slot = ns.demoActive and (ns.demoAssign[c] or 0) or ns.GetAssign(PS.player, c)
 			if slot > 0 and ns.BlessingDef[slot] then
