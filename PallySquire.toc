@@ -1,4 +1,4 @@
-## Interface: 11508
+## Interface: 11509
 ## Title: PallySquire
 ## Notes: Clean, SoD-native paladin blessing manager with cross-paladin assignment sync.
 ## Author: tek

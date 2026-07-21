@@ -173,6 +173,7 @@ function PS:PLAYER_LOGIN()
 	PS:RegisterEvent("PLAYER_REGEN_DISABLED")
 	PS:RegisterEvent("CHAT_MSG_ADDON")
 	PS:RegisterEvent("UNIT_AURA")
+	PS:RegisterEvent("BAG_UPDATE_DELAYED")
 	PS:RegisterEvent("PLAYER_ENTERING_WORLD")
 	if PS.isPally then
 		PS:RegisterEvent("SPELLS_CHANGED")

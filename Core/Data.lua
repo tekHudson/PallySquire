@@ -77,6 +77,7 @@ ns.SealDef = {
 
 ns.RIGHTEOUS_FURY_ID  = 25780
 ns.ENHANCED_BLESS_ID  = 435984  -- SoD passive: doubles blessing duration / halves mana
+ns.SYMBOL_OF_KINGS_ID = 21177   -- reagent consumed by each Greater Blessing cast
 
 ----------------------------------------------------------------------
 -- Severity colors for the class buttons (good / some-missing / all-missing).

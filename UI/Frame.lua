@@ -64,11 +64,6 @@ function PS:CreateMainFrame()
 	header:EnableMouse(true)
 	header:RegisterForDrag("LeftButton")
 
-	-- centered title (doubles as the drag label)
-	local htitle = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	htitle:SetPoint("CENTER")
-	htitle:SetText("PallySquire")
-
 	-- gear button (top-left) opens options
 	local gear = CreateFrame("Button", nil, header)
 	gear:SetSize(16, 16)
@@ -104,6 +99,38 @@ function PS:CreateMainFrame()
 		GameTooltip:Show()
 	end)
 	assign:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+	-- Symbol of Kings counter (reagent for Greater Blessings)
+	local sok = CreateFrame("Frame", nil, header)
+	sok:SetSize(36, ns.HEADER_H)
+	sok:SetPoint("RIGHT", assign, "LEFT", -3, 0)
+	sok:EnableMouse(true)
+	local sokIcon = sok:CreateTexture(nil, "OVERLAY")
+	sokIcon:SetSize(14, 14)
+	sokIcon:SetPoint("LEFT")
+	sokIcon:SetTexture("Interface\\Icons\\INV_Jewelry_Talisman_11")
+	sokIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	local sokCount = sok:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	sokCount:SetPoint("LEFT", sokIcon, "RIGHT", 2, 0)
+	sok.count = sokCount
+	sok:SetScript("OnEnter", function(self)
+		if PS.opt.hideTooltips then return end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText("Symbol of Kings: " .. (PS.symbols or 0))
+		GameTooltip:AddLine("Reagent for Greater Blessings", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	sok:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	PS.sokFrame = sok
+
+	-- title, confined between gear and the SoK counter so it truncates
+	-- instead of overlapping neighboring header widgets on narrow frames.
+	local htitle = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	htitle:SetPoint("LEFT", gear, "RIGHT", 2, 0)
+	htitle:SetPoint("RIGHT", sok, "LEFT", -2, 0)
+	htitle:SetJustifyH("CENTER")
+	htitle:SetWordWrap(false)
+	htitle:SetText("PallySquire")
 
 	header:SetScript("OnDragStart", function()
 		if not PS.opt.locked then f:StartMoving() end
@@ -195,6 +222,25 @@ end
 ----------------------------------------------------------------------
 -- Orchestration
 ----------------------------------------------------------------------
+-- Refresh the Symbol of Kings count (reagent for Greater Blessings).
+function PS:UpdateSymbols()
+	local n = GetItemCount(ns.SYMBOL_OF_KINGS_ID) or 0
+	PS.symbols = n
+	if not PS.sokFrame then return end
+	PS.sokFrame.count:SetText(n)
+	if n == 0 then
+		PS.sokFrame.count:SetTextColor(1, 0.2, 0.2)        -- out
+	elseif n <= 5 then
+		PS.sokFrame.count:SetTextColor(1, 0.82, 0.2)       -- low
+	else
+		PS.sokFrame.count:SetTextColor(0.85, 0.85, 0.85)
+	end
+end
+
+function PS:BAG_UPDATE_DELAYED()
+	PS:UpdateSymbols()
+end
+
 function PS:InitUI()
 	PS:CreateMainFrame()
 	PS:CreateButtons()
@@ -202,6 +248,7 @@ function PS:InitUI()
 	PS:CreateConfig()
 	PS:CreateOptions()
 	PS:UpdateLayout()
+	PS:UpdateSymbols()
 
 	-- Apply dirty aura flag on a light cadence so UNIT_AURA spam is cheap.
 	C_Timer.NewTicker(0.2, function()

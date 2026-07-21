@@ -15,7 +15,8 @@ in a mixed raid:
   FREEASSIGN YES|NO | SYMCOUNT <n> | COOLDOWNS:d:r:d:r
 
 Outgoing messages go through a small native throttle queue (replaces
-ChatThrottleLib). SoD has no Symbol of Kings, so SYMCOUNT is always 0.
+ChatThrottleLib). SYMCOUNT carries our Symbol of Kings (Greater Blessing
+reagent) count for the raid.
 ]]
 
 local ADDON, ns = ...
@@ -154,7 +155,7 @@ function PS:SendSelf(target)
 
 	-- Free-assign flag (+ SoD-stubbed symbol count / cooldowns for compat)
 	local flag = PS.opt.freeassign and "YES" or "NO"
-	PS:SendMessage(format("FREEASSIGN %s | SYMCOUNT 0 | COOLDOWNS:n:n:n:n", flag), nil, target)
+	PS:SendMessage(format("FREEASSIGN %s | SYMCOUNT %d | COOLDOWNS:n:n:n:n", flag, PS.symbols or 0), nil, target)
 end
 
 function PS:RequestSync()

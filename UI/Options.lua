@@ -117,7 +117,6 @@ function PS:CreateOptions()
 	-- Register with Settings API (modern) or legacy fallback.
 	if Settings and Settings.RegisterCanvasLayoutCategory then
 		local category = Settings.RegisterCanvasLayoutCategory(panel, "PallySquire")
-		category.ID = "PallySquire"
 		Settings.RegisterAddOnCategory(category)
 		PS.optionsCategory = category
 	elseif InterfaceOptions_AddCategory then
@@ -128,7 +127,7 @@ end
 
 function PS:OpenOptions()
 	if Settings and Settings.OpenToCategory and PS.optionsCategory then
-		Settings.OpenToCategory(PS.optionsCategory.ID)
+		Settings.OpenToCategory(PS.optionsCategory:GetID())
 	elseif InterfaceOptionsFrame_OpenToCategory then
 		InterfaceOptionsFrame_OpenToCategory(PS.optionsPanel)
 		InterfaceOptionsFrame_OpenToCategory(PS.optionsPanel)
