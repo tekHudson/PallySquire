@@ -6,6 +6,19 @@ This project follows [Keep a Changelog](https://keepachangelog.com) and
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-22
+### Added
+- Symbol of Kings counter in the header (reagent for Greater Blessings),
+  synced to the raid via SYMCOUNT; text turns yellow/red when running low.
+### Fixed
+- 1.15.9 compat: secure buttons now pin `useOnKeyDown` explicitly so clicks
+  aren't silently dropped depending on the `ActionButtonUseKeyDown` CVar.
+- 1.15.9 compat: stopped overwriting the Settings category's auto-assigned
+  `.ID`, which broke `Settings.OpenToCategory` (the Options button did
+  nothing).
+- Title text no longer overlaps the Symbol of Kings counter on narrow frames.
+- Bumped `## Interface:` to 11509 to match the 1.15.9 client.
+
 ## [0.2.0] - 2026-06-27
 ### Added
 - Greater Blessings: SoD paladins can train class-wide Greater Blessings, so
