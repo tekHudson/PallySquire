@@ -6,6 +6,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com) and
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-14
+### Fixed
+- Seal wheel (button + config flyout) was missing Seal of Martyrdom (SoD
+  rune, spell 407798); it now cycles/selects like the other seals.
+
 ## [0.2.1] - 2026-07-22
 ### Added
 - Symbol of Kings counter in the header (reagent for Greater Blessings),

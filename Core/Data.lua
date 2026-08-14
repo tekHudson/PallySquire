@@ -73,6 +73,7 @@ ns.SealDef = {
 	[4] = { id = 20164 }, -- Seal of Justice
 	[5] = { id = 20165 }, -- Seal of Light
 	[6] = { id = 20166 }, -- Seal of Wisdom
+	[7] = { id = 407798 }, -- Seal of Martyrdom (SoD rune)
 }
 
 ns.RIGHTEOUS_FURY_ID  = 25780
