@@ -100,34 +100,39 @@ function PS:CreateMainFrame()
 	end)
 	assign:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-	-- Symbol of Kings counter (reagent for Greater Blessings)
-	local sok = CreateFrame("Frame", nil, header)
-	sok:SetSize(36, ns.HEADER_H)
-	sok:SetPoint("RIGHT", assign, "LEFT", -3, 0)
-	sok:EnableMouse(true)
-	local sokIcon = sok:CreateTexture(nil, "OVERLAY")
-	sokIcon:SetSize(14, 14)
-	sokIcon:SetPoint("LEFT")
-	sokIcon:SetTexture("Interface\\Icons\\INV_Jewelry_Talisman_11")
-	sokIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	local sokCount = sok:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	sokCount:SetPoint("LEFT", sokIcon, "RIGHT", 2, 0)
-	sok.count = sokCount
-	sok:SetScript("OnEnter", function(self)
-		if PS.opt.hideTooltips then return end
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText("Symbol of Kings: " .. (PS.symbols or 0))
-		GameTooltip:AddLine("Reagent for Greater Blessings", 1, 1, 1)
-		GameTooltip:Show()
-	end)
-	sok:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	PS.sokFrame = sok
+	-- Symbol of Kings counter (reagent for Greater Blessings) — only relevant
+	-- if the player actually knows a Greater Blessing spell.
+	local sok
+	if ns.hasGreaterBlessing then
+		sok = CreateFrame("Frame", nil, header)
+		sok:SetSize(36, ns.HEADER_H)
+		sok:SetPoint("RIGHT", assign, "LEFT", -3, 0)
+		sok:EnableMouse(true)
+		local sokIcon = sok:CreateTexture(nil, "OVERLAY")
+		sokIcon:SetSize(14, 14)
+		sokIcon:SetPoint("LEFT")
+		sokIcon:SetTexture("Interface\\Icons\\INV_Jewelry_Talisman_11")
+		sokIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		local sokCount = sok:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		sokCount:SetPoint("LEFT", sokIcon, "RIGHT", 2, 0)
+		sok.count = sokCount
+		sok:SetScript("OnEnter", function(self)
+			if PS.opt.hideTooltips then return end
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:SetText("Symbol of Kings: " .. (PS.symbols or 0))
+			GameTooltip:AddLine("Reagent for Greater Blessings", 1, 1, 1)
+			GameTooltip:Show()
+		end)
+		sok:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		PS.sokFrame = sok
+	end
 
-	-- title, confined between gear and the SoK counter so it truncates
-	-- instead of overlapping neighboring header widgets on narrow frames.
+	-- title, confined between gear and the SoK counter (or the assignments
+	-- button when there's no SoK counter) so it truncates instead of
+	-- overlapping neighboring header widgets on narrow frames.
 	local htitle = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 	htitle:SetPoint("LEFT", gear, "RIGHT", 2, 0)
-	htitle:SetPoint("RIGHT", sok, "LEFT", -2, 0)
+	htitle:SetPoint("RIGHT", sok or assign, "LEFT", -2, 0)
 	htitle:SetJustifyH("CENTER")
 	htitle:SetWordWrap(false)
 	htitle:SetText("PallySquire")

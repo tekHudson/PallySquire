@@ -98,6 +98,7 @@ function PS:InitData()
 	ns.BlessingName = {}        -- slot -> normal (single-target) name
 	ns.GreaterName = {}         -- slot -> Greater Blessing name (nil if none)
 	ns.BlessingSlotByName = {}  -- localized name -> slot
+	ns.hasGreaterBlessing = false  -- true if any Greater Blessing is actually known
 	for slot, def in ipairs(ns.BlessingDef) do
 		local name = ns.SpellName(def.id) or def.key
 		ns.BlessingName[slot] = name
@@ -105,6 +106,7 @@ function PS:InitData()
 		def.name = name
 		if def.gid then
 			ns.GreaterName[slot] = ns.SpellName(def.gid)
+			if ns.IsSpellKnown(def.gid) then ns.hasGreaterBlessing = true end
 		end
 	end
 
@@ -126,6 +128,7 @@ function PS:InitData()
 	end
 
 	ns.RFName = ns.SpellName(ns.RIGHTEOUS_FURY_ID)
+	ns.hasRF = ns.IsSpellKnown(ns.RIGHTEOUS_FURY_ID)
 	ns.hasEnhancedBlessings = ns.IsSpellKnown(ns.ENHANCED_BLESS_ID)
 end
 

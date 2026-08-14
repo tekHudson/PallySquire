@@ -221,7 +221,7 @@ function PS:UpdateLayout()
 	if PS.opt.showAuto then controls[#controls + 1] = PS.autoButton else PS.autoButton:Hide() end
 	if PS.opt.showAura then controls[#controls + 1] = PS.auraButton else PS.auraButton:Hide() end
 	if PS.opt.showSeal then controls[#controls + 1] = PS.sealButton else PS.sealButton:Hide() end
-	if PS.opt.showRF   then controls[#controls + 1] = PS.rfButton   else PS.rfButton:Hide()   end
+	if PS.opt.showRF and ns.hasRF then controls[#controls + 1] = PS.rfButton else PS.rfButton:Hide() end
 	for i, b in ipairs(controls) do
 		b:ClearAllPoints()
 		b:SetPoint("TOPLEFT", frame, "TOPLEFT", MARGIN + (i - 1) * STEP, top)
@@ -247,7 +247,7 @@ function PS:UpdateLayout()
 		PS.sealButton.icon:SetTexture(ns.SpellIcon(ns.SealDef[PS.opt.seal] and ns.SealDef[PS.opt.seal].id))
 		setCast(PS.sealButton, sealName, "player")
 	end
-	if PS.opt.showRF then
+	if PS.opt.showRF and ns.hasRF then
 		PS.rfButton.icon:SetTexture(ns.SpellIcon(ns.RIGHTEOUS_FURY_ID))
 		setCast(PS.rfButton, ns.RFName, "player")
 	end
@@ -318,7 +318,7 @@ function PS:UpdateVisuals()
 		PS.auraButton.icon:SetVertexColor(1, 1, 1)
 	end
 	selfRing(PS.sealButton, ns.SealName[PS.opt.seal])
-	if PS.opt.showRF then selfRing(PS.rfButton, ns.RFName) end
+	if PS.opt.showRF and ns.hasRF then selfRing(PS.rfButton, ns.RFName) end
 
 	for c = 1, ns.MAX_CLASSES do
 		local cb = PS.classButtons[c]

@@ -6,6 +6,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com) and
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-08-14
+### Fixed
+- Righteous Fury button no longer shows once toggled on if the player
+  hasn't actually learned Righteous Fury.
+- Symbol of Kings counter (header) no longer shows for paladins who don't
+  know any Greater Blessing (it's only relevant as a Greater Blessing
+  reagent).
+
 ## [0.2.2] - 2026-08-14
 ### Fixed
 - Seal wheel (button + config flyout) was missing Seal of Martyrdom (SoD
